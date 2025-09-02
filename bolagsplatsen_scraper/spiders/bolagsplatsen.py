@@ -10,6 +10,14 @@ class BolagsplatsenSpider(scrapy.Spider):
     allowed_domains = ["bolagsplatsen.se"]
     start_urls = ["https://www.bolagsplatsen.se/foretag-till-salu/alla/alla"]
     
+    def start_requests(self):
+        """Override start_requests to add logging"""
+        self.logger.info("BolagsplatsenSpider starting...")
+        self.logger.info(f"Start URLs: {self.start_urls}")
+        for url in self.start_urls:
+            self.logger.info(f"Making request to: {url}")
+            yield scrapy.Request(url, callback=self.parse)
+    
     # Custom settings for this spider
     custom_settings = {
         'ROBOTSTXT_OBEY': False,
@@ -21,6 +29,8 @@ class BolagsplatsenSpider(scrapy.Spider):
     def parse(self, response):
         """Parse the main listings page"""
         self.logger.info(f"Parsing main page: {response.url}")
+        self.logger.info(f"Response status: {response.status}")
+        self.logger.info(f"Response body length: {len(response.body)}")
         
         # Extract all listing containers
         listing_containers = response.css('div.list-items-list')
