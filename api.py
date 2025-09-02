@@ -111,46 +111,70 @@ def run_scraper():
         from scrapy.crawler import CrawlerProcess
         from scrapy.utils.project import get_project_settings
         
-        # Create a list to store scraped items
-        scraped_items = []
-        
-        # Create a custom pipeline class to collect items
-        class MemoryPipeline:
-            def __init__(self):
-                self.items = []
-            
-            def process_item(self, item, spider):
-                self.items.append(item)
-                return item
-        
         # Get project settings
         settings = get_project_settings()
+        logger.info(f"Project settings loaded from: {settings.get('SETTINGS_MODULE')}")
         
         # Configure settings for in-memory scraping
         settings.set('FEEDS', {})  # Disable file output
-        settings.set('LOG_LEVEL', 'ERROR')  # Reduce logging
+        settings.set('LOG_LEVEL', 'INFO')  # Increase logging for debugging
         settings.set('ROBOTSTXT_OBEY', False)
         settings.set('DOWNLOAD_DELAY', 1)
         settings.set('CONCURRENT_REQUESTS', 1)
         
-        # Add our custom pipeline
+        # Debug: Print current settings
+        logger.info(f"Scrapy settings: {dict(settings)}")
+        
+        # Create crawler process
+        process = CrawlerProcess(settings)
+        
+        # Add the spider
+        logger.info("Adding bolagsplatsen spider to process")
+        
+        # Check if spider is available
+        try:
+            from bolagsplatsen_scraper.spiders.bolagsplatsen import BolagsplatsenSpider
+            logger.info("Spider class imported successfully")
+        except Exception as e:
+            logger.error(f"Failed to import spider: {e}")
+            return []
+        
+        # Use a custom pipeline to collect items
+        class MemoryPipeline:
+            def __init__(self):
+                self.items = []
+                logger.info("MemoryPipeline initialized")
+            
+            def process_item(self, item, spider):
+                logger.info(f"Pipeline processing item: {type(item)}")
+                self.items.append(item)
+                logger.info(f"Pipeline now has {len(self.items)} items")
+                return item
+        
+        # Create pipeline instance
+        pipeline = MemoryPipeline()
+        
+        # Configure settings to use our pipeline
         settings.set('ITEM_PIPELINES', {'__main__.MemoryPipeline': 300})
         
         # Create crawler process
         process = CrawlerProcess(settings)
         
-        # Create pipeline instance
-        pipeline = MemoryPipeline()
-        
         # Add the spider
+        logger.info("Adding bolagsplatsen spider to process")
         process.crawl('bolagsplatsen')
         
         # Start the crawling process
-        process.start()
+        logger.info("Starting crawler process")
+        try:
+            process.start()
+            logger.info("Crawler process completed successfully")
+        except Exception as e:
+            logger.error(f"Crawler process failed: {e}")
+            return []
         
         # Get collected items from pipeline
         scraped_items = pipeline.items
-        
         logger.info(f"Scraper completed, collected {len(scraped_items)} items")
         
         if scraped_items:
