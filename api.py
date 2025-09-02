@@ -110,18 +110,18 @@ def run_scraper():
         # Import Scrapy components for in-memory scraping
         from scrapy.crawler import CrawlerProcess
         from scrapy.utils.project import get_project_settings
-        from scrapy import signals
-        from scrapy.signalmanager import dispatcher
         
         # Create a list to store scraped items
         scraped_items = []
         
-        def item_scraped(item, response, spider):
-            """Callback to collect scraped items"""
-            scraped_items.append(item)
-        
-        # Connect the signal to collect items
-        dispatcher.connect(item_scraped, signal=signals.item_passed)
+        # Create a custom pipeline class to collect items
+        class MemoryPipeline:
+            def __init__(self):
+                self.items = []
+            
+            def process_item(self, item, spider):
+                self.items.append(item)
+                return item
         
         # Get project settings
         settings = get_project_settings()
@@ -133,14 +133,23 @@ def run_scraper():
         settings.set('DOWNLOAD_DELAY', 1)
         settings.set('CONCURRENT_REQUESTS', 1)
         
+        # Add our custom pipeline
+        settings.set('ITEM_PIPELINES', {'__main__.MemoryPipeline': 300})
+        
         # Create crawler process
         process = CrawlerProcess(settings)
+        
+        # Create pipeline instance
+        pipeline = MemoryPipeline()
         
         # Add the spider
         process.crawl('bolagsplatsen')
         
         # Start the crawling process
         process.start()
+        
+        # Get collected items from pipeline
+        scraped_items = pipeline.items
         
         logger.info(f"Scraper completed, collected {len(scraped_items)} items")
         
