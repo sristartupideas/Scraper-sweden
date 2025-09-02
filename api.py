@@ -139,23 +139,14 @@ def run_scraper():
             logger.error(f"Failed to import spider: {e}")
             return []
         
-        # Use a custom pipeline to collect items
-        class MemoryPipeline:
-            def __init__(self):
-                self.items = []
-                logger.info("MemoryPipeline initialized")
-            
-            def process_item(self, item, spider):
-                logger.info(f"Pipeline processing item: {type(item)}")
-                self.items.append(item)
-                logger.info(f"Pipeline now has {len(self.items)} items")
-                return item
+        # Import our memory collection pipeline
+        from bolagsplatsen_scraper.pipelines import MemoryCollectionPipeline
         
         # Create pipeline instance
-        pipeline = MemoryPipeline()
+        pipeline = MemoryCollectionPipeline()
         
         # Configure settings to use our pipeline
-        settings.set('ITEM_PIPELINES', {'__main__.MemoryPipeline': 300})
+        settings.set('ITEM_PIPELINES', {'bolagsplatsen_scraper.pipelines.MemoryCollectionPipeline': 400})
         
         # Create crawler process
         process = CrawlerProcess(settings)
@@ -174,7 +165,7 @@ def run_scraper():
             return []
         
         # Get collected items from pipeline
-        scraped_items = pipeline.items
+        scraped_items = pipeline.get_collected_items()
         logger.info(f"Scraper completed, collected {len(scraped_items)} items")
         
         if scraped_items:
